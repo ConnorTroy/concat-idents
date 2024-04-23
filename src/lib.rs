@@ -4,6 +4,7 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
+use proc_macro2::{Group, TokenTree};
 
 use quote::quote;
 use syn::{
@@ -217,6 +218,24 @@ impl IdentReplacer {
         self
     }
 
+    fn replace_idents_in_stream(&mut self, stream: &mut proc_macro2::TokenStream) {
+        let tokens = std::mem::take(stream).into_iter().map(|mut token_tree| {
+            match token_tree {
+                TokenTree::Ident(ref mut node) => {
+                    self.visit_ident_mut(node);
+                }
+                TokenTree::Group(ref mut group) => {
+                    let mut stream = group.stream();
+                    self.replace_idents_in_stream(&mut stream);
+                    *group = Group::new(group.delimiter(), stream);
+                }
+                _ => {},
+            };
+            token_tree
+        });
+        stream.extend(tokens);
+    }
+
     /// generates a TokenStream from the code-block
     fn produce_token_stream(self) -> TokenStream {
         let statements = self.code_block.unwrap().stmts;
@@ -232,6 +251,13 @@ impl VisitMut for IdentReplacer {
 
         // Delegate to the default impl
         visit_mut::visit_ident_mut(self, node);
+    }
+
+    fn visit_macro_mut(&mut self, node: &mut syn::Macro) {
+        self.replace_idents_in_stream(&mut node.tokens);
+
+        // Delegate to the default impl
+        visit_mut::visit_macro_mut(self, node);
     }
 }
 

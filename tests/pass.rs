@@ -84,6 +84,40 @@ macro_rules! nested {
 nested!();
 
 
+macro_rules! recursive_macro {
+    ($ident1:ident, $ident2:ident) => {
+        concat_idents!(fn_name = $ident1, _, $ident2 {
+            recursive_macro!(@internal_rule fn_name);
+        });
+    };
+
+    (@internal_rule $fn_name:ident) => {
+        fn $fn_name() {
+            println!("works in recursive macros!");
+        }
+    };
+}
+
+recursive_macro!(works_in, recursive_macros);
+
+macro_rules! nested_macro_rules {
+    ($ident1:ident, $ident2:ident) => {
+        concat_idents!(macro_name = $ident1, _, $ident2 {
+            macro_rules! macro_name {
+                () => {
+                    fn macro_name() {
+                        println!("works in nested macro_rules!");
+                    }
+                };
+            }
+        });
+    };
+}
+
+nested_macro_rules!(works_in, nested_macro_rules);
+works_in_nested_macro_rules!();
+
+
 macro_rules! create_test {
     ($ident1:ident, $ident2:ident) => {
         concat_idents!(fn_name = $ident1, _, $ident2 {
@@ -119,4 +153,6 @@ fn main() {
     super_is_also_possible();
     works_in_macro();
     _works_while_1stuff_is_mixed();
+    works_in_recursive_macros();
+    works_in_nested_macro_rules();
 }
